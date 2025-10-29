@@ -31,7 +31,7 @@ body {
     pointer-events: none;
 }
 
-/* Bouton reset mobile uniquement */
+
 .reset-btn.mobile-only {
     display: none;
 }
@@ -62,7 +62,7 @@ body.mobile .reset-btn.mobile-only:active {
     transform: scale(0.95);
 }
 
-/* Menu burger pour PC */
+
 .burger-menu {
     position: fixed;
     top: 20px;

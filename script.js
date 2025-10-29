@@ -58,7 +58,7 @@ const viewport = document.getElementById('viewport');
             translateX = Math.max(minX, Math.min(maxX, translateX));
             translateY = Math.max(minY, Math.min(maxY, translateY));
             updatePosition();
-            // Synchroniser le slider si présent
+           
             const zoomSlider = document.getElementById('zoomSlider');
             const zoomValue = document.getElementById('zoomValue');
             if (zoomSlider && zoomValue) {
@@ -390,7 +390,7 @@ const viewport = document.getElementById('viewport');
             document.body.classList.add('mobile');
         }
 
-        // Menu burger et slider de zoom (PC uniquement)
+    
         const burgerMenu = document.getElementById('burgerMenu');
         const burgerBtn = document.getElementById('burgerBtn');
         const burgerContent = document.getElementById('burgerContent');
@@ -398,20 +398,20 @@ const viewport = document.getElementById('viewport');
         const zoomValue = document.getElementById('zoomValue');
 
         if (burgerBtn && burgerContent) {
-            // Toggle menu burger
+       
             burgerBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
                 burgerMenu.classList.toggle('active');
             });
 
-            // Fermer le menu si on clique en dehors
+           
             document.addEventListener('click', (e) => {
                 if (!burgerMenu.contains(e.target)) {
                     burgerMenu.classList.remove('active');
                 }
             });
 
-            // Empêcher la fermeture quand on clique dans le menu
+           
             burgerContent.addEventListener('click', (e) => {
                 e.stopPropagation();
             });
@@ -419,11 +419,11 @@ const viewport = document.getElementById('viewport');
 
         // Slider de zoom
         if (zoomSlider && zoomValue) {
-            // Convertir valeur slider (50-120) en scale (0.5-1.2)
+         
             const sliderToScale = (val) => val / 100;
             const scaleToSlider = (scl) => scl * 100;
 
-            // Initialiser la valeur du slider selon le scale actuel
+           
             zoomSlider.value = scaleToSlider(scale);
             zoomValue.textContent = Math.round(scaleToSlider(scale)) + '%';
 
