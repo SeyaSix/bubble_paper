@@ -12,8 +12,9 @@ const viewport = document.getElementById('viewport');
         let velocityY = 0;
 
       
-        const rows = 100;
-        const cols = 100;
+        const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
+        const rows = isMobile ? 30 : 100;
+        const cols = isMobile ? 18 : 100;
         const bubbleSize = 70;
         const gap = 20;
         const padding = 50;
@@ -34,21 +35,68 @@ const viewport = document.getElementById('viewport');
             container.style.transform = `translate(${translateX}px, ${translateY}px)`;
         }
 
-       
-        const popAudio = new Audio('assets/bubble.mp3');
-        popAudio.preload = 'auto';
         
+        // Audio faible latence via Web Audio API
+        let audioCtx;
+        let popBuffer = null;
+        let htmlAudioFallback = new Audio('assets/bubble.mp3');
+        htmlAudioFallback.preload = 'auto';
+
+        async function initAudio() {
+            if (audioCtx) return;
+            // Si ouvert en file://, éviter fetch (CORS) et basculer en fallback HTMLAudio
+            if (window.location.protocol === 'file:') {
+                // En local, garder uniquement le fallback
+                return;
+            }
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'interactive' });
+            try {
+                const res = await fetch('assets/bubble.mp3');
+                const arr = await res.arrayBuffer();
+                popBuffer = await audioCtx.decodeAudioData(arr);
+            } catch (e) {
+                console.log('Erreur init audio:', e);
+                // Fallback déjà prêt
+            }
+        }
+
+        function unlockAudioContext() {
+            if (!audioCtx) {
+                initAudio().then(() => {
+                    if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+                });
+            } else if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
         function playPopSound() {
-         
-            const sound = popAudio.cloneNode();
-            sound.volume = 0.5;
-            sound.play().catch(e => console.log('Erreur audio:', e));
+            // Tenter l'unlock si nécessaire
+            if (!audioCtx || (audioCtx && audioCtx.state === 'suspended')) {
+                unlockAudioContext();
+            }
+            if (audioCtx && popBuffer) {
+                const src = audioCtx.createBufferSource();
+                src.buffer = popBuffer;
+                const gain = audioCtx.createGain();
+                gain.gain.value = 0.5;
+                src.connect(gain).connect(audioCtx.destination);
+                src.start(0);
+                return;
+            }
+            if (htmlAudioFallback) {
+                const sound = htmlAudioFallback.cloneNode();
+                sound.volume = 0.5;
+                sound.play().catch(() => {});
+            }
         }
 
         function createBubbles() {
             bubbleWrap.innerHTML = '';
             popped = 0;
             const colors = ['blue', 'green', 'pink', 'purple', 'orange', 'cyan'];
+            // Adapter la grille dynamiquement au nombre de colonnes
+            bubbleWrap.style.gridTemplateColumns = `repeat(${cols}, ${bubbleSize}px)`;
             
             for (let i = 0; i < rows * cols; i++) {
                 const bubble = document.createElement('div');
@@ -72,15 +120,15 @@ const viewport = document.getElementById('viewport');
                 const centerY = rect.top + rect.height / 2;
                 const bubbleColor = getComputedStyle(this).borderColor;
                 
-    
-                for (let i = 0; i < 8; i++) {
+                const particleCount = isMobile ? 4 : 8;
+                for (let i = 0; i < particleCount; i++) {
                     const particle = document.createElement('div');
                     particle.className = 'particle';
                     particle.style.left = centerX + 'px';
                     particle.style.top = centerY + 'px';
                     particle.style.backgroundColor = bubbleColor;
                     
-                    const angle = (i / 8) * Math.PI * 2;
+                    const angle = (i / particleCount) * Math.PI * 2;
                     const distance = 40 + Math.random() * 30;
                     const tx = Math.cos(angle) * distance;
                     const ty = Math.sin(angle) * distance;
@@ -201,6 +249,10 @@ const viewport = document.getElementById('viewport');
             }
         }, true);
 
-    
+        // Débloquer l'audio au premier geste utilisateur
+        window.addEventListener('pointerdown', unlockAudioContext, { once: true });
+        window.addEventListener('touchstart', unlockAudioContext, { once: true, passive: true });
+        window.addEventListener('mousedown', unlockAudioContext, { once: true });
+
         createBubbles();
         updatePosition();

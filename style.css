@@ -77,7 +77,6 @@ body {
 
 .bubble-wrap {
     display: grid;
-    grid-template-columns: repeat(100, 70px);
     gap: 20px;
     padding: 50px;
 }
@@ -178,4 +177,9 @@ body {
         opacity: 0;
         transform: translate(var(--tx), var(--ty)) scale(0);
     }
+}
+
+/* Optimisations tactiles mobiles pour éviter la latence des gestes */
+.viewport, .bubble-wrap, .bubble {
+    touch-action: none;
 }
