@@ -94,6 +94,13 @@ body {
         0 4px 8px rgba(0,0,0,0.2);
 }
 
+
+.mobile .bubble {
+    box-shadow:
+        inset -2px -2px 6px rgba(0,0,0,0.18),
+        inset 2px 2px 6px rgba(255,255,255,0.7);
+}
+
 .bubble.blue {
     background: radial-gradient(circle at 30% 30%, #e3f2fd, #90caf9, #42a5f5);
     border: 3px solid #1976d2;
@@ -179,7 +186,7 @@ body {
     }
 }
 
-/* Optimisations tactiles mobiles pour éviter la latence des gestes */
+
 .viewport, .bubble-wrap, .bubble {
     touch-action: none;
 }

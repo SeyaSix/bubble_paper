@@ -15,8 +15,8 @@ const viewport = document.getElementById('viewport');
 
       
         const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
-        const rows = isMobile ? 30 : 100;
-        const cols = isMobile ? 18 : 100;
+        const rows = 100;
+        const cols = 100;
         const bubbleSize = 70;
         const gap = 20;
         const padding = 50;
@@ -27,14 +27,37 @@ const viewport = document.getElementById('viewport');
         let translateX = window.innerWidth / 2 - gridWidth / 2;
         let translateY = window.innerHeight / 2 - gridHeight / 2;
 
-   
-        const maxX = 0;
-        const minX = window.innerWidth - gridWidth;
-        const maxY = 0;
-        const minY = window.innerHeight - gridHeight;
+        
+        let scale = 1;
+        const minScale = 0.5;
+        const maxScale = 1.2;
+
+        let maxX = 0;
+        let minX = window.innerWidth - gridWidth * scale;
+        let maxY = 0;
+        let minY = window.innerHeight - gridHeight * scale;
+
+        function updateBounds() {
+            minX = window.innerWidth - gridWidth * scale;
+            minY = window.innerHeight - gridHeight * scale;
+        }
 
         function updatePosition() {
-            container.style.transform = `translate(${translateX}px, ${translateY}px)`;
+            container.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
+        }
+
+        function setScale(newScale, anchorX, anchorY) {
+            const clamped = Math.max(minScale, Math.min(maxScale, newScale));
+            if (clamped === scale) return;
+            const worldX = (anchorX - translateX) / scale;
+            const worldY = (anchorY - translateY) / scale;
+            scale = clamped;
+            updateBounds();
+            translateX = anchorX - worldX * scale;
+            translateY = anchorY - worldY * scale;
+            translateX = Math.max(minX, Math.min(maxX, translateX));
+            translateY = Math.max(minY, Math.min(maxY, translateY));
+            updatePosition();
         }
 
         
@@ -196,7 +219,7 @@ const viewport = document.getElementById('viewport');
             translateX = scrollLeft + walkX;
             translateY = scrollTop + walkY;
             
-            // Limiter le déplacement
+           
             translateX = Math.max(minX, Math.min(maxX, translateX));
             translateY = Math.max(minY, Math.min(maxY, translateY));
             
@@ -239,7 +262,7 @@ const viewport = document.getElementById('viewport');
             translateX = scrollLeft + walkX;
             translateY = scrollTop + walkY;
             
-          
+            
             translateX = Math.max(minX, Math.min(maxX, translateX));
             translateY = Math.max(minY, Math.min(maxY, translateY));
             
@@ -306,6 +329,58 @@ const viewport = document.getElementById('viewport');
                 isPopping = false;
             });
         }
+
+        //zoom
+        const activePointers = new Map();
+        let initialPinchDistance = 0;
+        let initialScale = 1;
+        if (supportsPointer) {
+            viewport.addEventListener('pointerdown', (e) => {
+                activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+            });
+            viewport.addEventListener('pointermove', (e) => {
+                if (!activePointers.has(e.pointerId)) return;
+                activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+                if (activePointers.size === 2) {
+                    const pts = Array.from(activePointers.values());
+                    const dx = pts[0].x - pts[1].x;
+                    const dy = pts[0].y - pts[1].y;
+                    const dist = Math.hypot(dx, dy);
+                    const midX = (pts[0].x + pts[1].x) / 2;
+                    const midY = (pts[0].y + pts[1].y) / 2;
+                    if (!initialPinchDistance) {
+                        initialPinchDistance = dist;
+                        initialScale = scale;
+                    } else if (initialPinchDistance > 0) {
+                        const factor = dist / initialPinchDistance;
+                        setScale(initialScale * factor, midX, midY);
+                        isPopping = false;
+                        isDragging = false;
+                    }
+                }
+            }, { passive: true });
+            const endPtr = (e) => {
+                activePointers.delete(e.pointerId);
+                if (activePointers.size < 2) {
+                    initialPinchDistance = 0;
+                }
+            };
+            viewport.addEventListener('pointerup', endPtr);
+            viewport.addEventListener('pointercancel', endPtr);
+            viewport.addEventListener('pointerleave', endPtr);
+        }
+
+        if (isMobile) {
+            document.body.classList.add('mobile');
+        }
+
+    
+        window.addEventListener('resize', () => {
+            updateBounds();
+            translateX = Math.max(minX, Math.min(maxX, translateX));
+            translateY = Math.max(minY, Math.min(maxY, translateY));
+            updatePosition();
+        });
 
         createBubbles();
         updatePosition();
