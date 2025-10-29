@@ -5,6 +5,8 @@ const viewport = document.getElementById('viewport');
         
         let popped = 0;
         let isDragging = false;
+        let isPopping = false;
+        const supportsPointer = 'onpointerdown' in window;
         let startX, startY;
         let scrollLeft = 0;
         let scrollTop = 0;
@@ -36,7 +38,7 @@ const viewport = document.getElementById('viewport');
         }
 
         
-        // Audio faible latence via Web Audio API
+       
         let audioCtx;
         let popBuffer = null;
         let htmlAudioFallback = new Audio('assets/bubble.mp3');
@@ -44,9 +46,9 @@ const viewport = document.getElementById('viewport');
 
         async function initAudio() {
             if (audioCtx) return;
-            // Si ouvert en file://, éviter fetch (CORS) et basculer en fallback HTMLAudio
+            
             if (window.location.protocol === 'file:') {
-                // En local, garder uniquement le fallback
+            
                 return;
             }
             audioCtx = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'interactive' });
@@ -56,7 +58,7 @@ const viewport = document.getElementById('viewport');
                 popBuffer = await audioCtx.decodeAudioData(arr);
             } catch (e) {
                 console.log('Erreur init audio:', e);
-                // Fallback déjà prêt
+               
             }
         }
 
@@ -71,7 +73,7 @@ const viewport = document.getElementById('viewport');
         }
 
         function playPopSound() {
-            // Tenter l'unlock si nécessaire
+           
             if (!audioCtx || (audioCtx && audioCtx.state === 'suspended')) {
                 unlockAudioContext();
             }
@@ -95,15 +97,22 @@ const viewport = document.getElementById('viewport');
             bubbleWrap.innerHTML = '';
             popped = 0;
             const colors = ['blue', 'green', 'pink', 'purple', 'orange', 'cyan'];
-            // Adapter la grille dynamiquement au nombre de colonnes
+          
             bubbleWrap.style.gridTemplateColumns = `repeat(${cols}, ${bubbleSize}px)`;
             
             for (let i = 0; i < rows * cols; i++) {
                 const bubble = document.createElement('div');
                 const randomColor = colors[Math.floor(Math.random() * colors.length)];
                 bubble.className = `bubble ${randomColor}`;
-                bubble.addEventListener('mousedown', popBubble);
-                bubble.addEventListener('touchstart', popBubble);
+                if (supportsPointer) {
+                    bubble.addEventListener('pointerdown', function(e) {
+                        isPopping = true;
+                        popBubble.call(this, e);
+                    });
+                } else {
+                    bubble.addEventListener('mousedown', popBubble);
+                    bubble.addEventListener('touchstart', popBubble);
+                }
                 bubbleWrap.appendChild(bubble);
             }
             updateCounter();
@@ -230,7 +239,7 @@ const viewport = document.getElementById('viewport');
             translateX = scrollLeft + walkX;
             translateY = scrollTop + walkY;
             
-            // Limiter le déplacement
+          
             translateX = Math.max(minX, Math.min(maxX, translateX));
             translateY = Math.max(minY, Math.min(maxY, translateY));
             
@@ -249,10 +258,54 @@ const viewport = document.getElementById('viewport');
             }
         }, true);
 
-        // Débloquer l'audio au premier geste utilisateur
+       
         window.addEventListener('pointerdown', unlockAudioContext, { once: true });
         window.addEventListener('touchstart', unlockAudioContext, { once: true, passive: true });
         window.addEventListener('mousedown', unlockAudioContext, { once: true });
+
+       
+        if (supportsPointer) {
+            window.addEventListener('pointermove', (e) => {
+                if (!isPopping) return;
+                const el = document.elementFromPoint(e.clientX, e.clientY);
+                if (el && el.classList && el.classList.contains('bubble') && !el.classList.contains('popped')) {
+                    popBubble.call(el, e);
+                }
+            }, { passive: true });
+            window.addEventListener('pointerup', () => {
+                isPopping = false;
+            });
+            window.addEventListener('pointercancel', () => {
+                isPopping = false;
+            });
+        } else {
+           
+            window.addEventListener('mousemove', (e) => {
+                if (!isPopping) return;
+                const el = document.elementFromPoint(e.clientX, e.clientY);
+                if (el && el.classList && el.classList.contains('bubble') && !el.classList.contains('popped')) {
+                    popBubble.call(el, e);
+                }
+            });
+            window.addEventListener('mouseup', () => {
+                isPopping = false;
+            });
+            window.addEventListener('touchmove', (e) => {
+                if (!isPopping) return;
+                const t = e.touches[0];
+                if (!t) return;
+                const el = document.elementFromPoint(t.clientX, t.clientY);
+                if (el && el.classList && el.classList.contains('bubble') && !el.classList.contains('popped')) {
+                    popBubble.call(el, e);
+                }
+            }, { passive: true });
+            window.addEventListener('touchend', () => {
+                isPopping = false;
+            });
+            window.addEventListener('touchcancel', () => {
+                isPopping = false;
+            });
+        }
 
         createBubbles();
         updatePosition();
