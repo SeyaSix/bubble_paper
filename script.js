@@ -58,6 +58,13 @@ const viewport = document.getElementById('viewport');
             translateX = Math.max(minX, Math.min(maxX, translateX));
             translateY = Math.max(minY, Math.min(maxY, translateY));
             updatePosition();
+            // Synchroniser le slider si présent
+            const zoomSlider = document.getElementById('zoomSlider');
+            const zoomValue = document.getElementById('zoomValue');
+            if (zoomSlider && zoomValue) {
+                zoomSlider.value = scale * 100;
+                zoomValue.textContent = Math.round(scale * 100) + '%';
+            }
         }
 
         
@@ -188,9 +195,18 @@ const viewport = document.getElementById('viewport');
             createBubbles();
             translateX = window.innerWidth / 2 - gridWidth / 2;
             translateY = window.innerHeight / 2 - gridHeight / 2;
+            // Remettre le zoom à 100%
+            const centerX = window.innerWidth / 2;
+            const centerY = window.innerHeight / 2;
+            setScale(1, centerX, centerY);
             translateX = Math.max(minX, Math.min(maxX, translateX));
             translateY = Math.max(minY, Math.min(maxY, translateY));
             updatePosition();
+            // Fermer le menu burger si ouvert
+            const burgerMenu = document.getElementById('burgerMenu');
+            if (burgerMenu) {
+                burgerMenu.classList.remove('active');
+            }
         }
 
 
@@ -374,7 +390,52 @@ const viewport = document.getElementById('viewport');
             document.body.classList.add('mobile');
         }
 
-    
+        // Menu burger et slider de zoom (PC uniquement)
+        const burgerMenu = document.getElementById('burgerMenu');
+        const burgerBtn = document.getElementById('burgerBtn');
+        const burgerContent = document.getElementById('burgerContent');
+        const zoomSlider = document.getElementById('zoomSlider');
+        const zoomValue = document.getElementById('zoomValue');
+
+        if (burgerBtn && burgerContent) {
+            // Toggle menu burger
+            burgerBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                burgerMenu.classList.toggle('active');
+            });
+
+            // Fermer le menu si on clique en dehors
+            document.addEventListener('click', (e) => {
+                if (!burgerMenu.contains(e.target)) {
+                    burgerMenu.classList.remove('active');
+                }
+            });
+
+            // Empêcher la fermeture quand on clique dans le menu
+            burgerContent.addEventListener('click', (e) => {
+                e.stopPropagation();
+            });
+        }
+
+        // Slider de zoom
+        if (zoomSlider && zoomValue) {
+            // Convertir valeur slider (50-120) en scale (0.5-1.2)
+            const sliderToScale = (val) => val / 100;
+            const scaleToSlider = (scl) => scl * 100;
+
+            // Initialiser la valeur du slider selon le scale actuel
+            zoomSlider.value = scaleToSlider(scale);
+            zoomValue.textContent = Math.round(scaleToSlider(scale)) + '%';
+
+            zoomSlider.addEventListener('input', (e) => {
+                const newScale = sliderToScale(parseFloat(e.target.value));
+                const centerX = window.innerWidth / 2;
+                const centerY = window.innerHeight / 2;
+                setScale(newScale, centerX, centerY);
+                zoomValue.textContent = Math.round(scaleToSlider(scale)) + '%';
+            });
+        }
+
         window.addEventListener('resize', () => {
             updateBounds();
             translateX = Math.max(minX, Math.min(maxX, translateX));
